@@ -13,6 +13,9 @@ import com.hover.sdk.transactions.TransactionContract;
 import com.hover.stax.R;
 import com.hover.stax.actions.Action;
 import com.hover.stax.utils.DateUtils;
+import com.hover.stax.utils.Utils;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.text.DecimalFormat;
 import java.util.HashMap;
@@ -64,6 +67,18 @@ public class StaxTransaction {
 	@ColumnInfo(name = "recipient")
 	public String recipient;
 
+	@ColumnInfo(name = "fromInstitutionStartPos")
+	public int fromInstitutionStartPos;
+
+	@ColumnInfo(name = "fromInstitutionEndPos")
+	public int fromInstitutionEndPos;
+
+	@ColumnInfo(name = "month")
+	public int month;
+
+	@ColumnInfo(name = "year")
+	public int year;
+
 	public StaxTransaction() {}
 
 	public StaxTransaction(Intent data, Action action, Context c) {
@@ -75,11 +90,12 @@ public class StaxTransaction {
 			status = data.getStringExtra(TransactionContract.COLUMN_STATUS);
 			initiated_at = data.getLongExtra(TransactionContract.COLUMN_REQUEST_TIMESTAMP, DateUtils.now());
 			updated_at = initiated_at;
+			setMonthAndYear(updated_at);
 
 			HashMap<String, String> extras = (HashMap<String, String>) data.getSerializableExtra(TransactionContract.COLUMN_INPUT_EXTRAS);
 			if (extras != null) {
 				if (extras.containsKey(Action.AMOUNT_KEY))
-					amount = formatAmount(extras.get(Action.AMOUNT_KEY));
+					amount = Utils.formatAmountV2((extras.get(Action.AMOUNT_KEY)));
 				if (extras.containsKey(Action.PHONE_KEY))
 					recipient = extras.get(Action.PHONE_KEY);
 				else if (extras.containsKey(Action.ACCOUNT_KEY))
@@ -93,32 +109,46 @@ public class StaxTransaction {
 	public void update(Intent data) {
 		status = data.getStringExtra(TransactionContract.COLUMN_STATUS);
 		updated_at = data.getLongExtra(TransactionContract.COLUMN_UPDATE_TIMESTAMP, DateUtils.now());
+		setMonthAndYear(updated_at);
 
 		HashMap<String, String> extras = (HashMap<String, String>) data.getSerializableExtra(TransactionContract.COLUMN_PARSED_VARIABLES);
 		if (extras.containsKey(Action.FEE_KEY))
-			fee = formatAmount(extras.get(Action.FEE_KEY));
+			fee = Utils.formatAmountV2(extras.get(Action.FEE_KEY));
+	}
+	private void setMonthAndYear(long timestamp) {
+		StaxDate staxDate = DateUtils.getStaxDate(timestamp);
+		month = staxDate.getMonth();
+		year = staxDate.getYear();
 	}
 
-	String generateDescription(Action action, Context c) {
+	private String generateDescription(Action action, Context c) {
 		switch (transaction_type) {
 			case Action.AIRTIME:
+				String sender = action.from_institution_name+" ";
 				Log.e("STAX", (action.from_institution_name.equals("null") + ""));
-				return c.getString(R.string.transaction_descrip_airtime, action.from_institution_name, ((recipient == null || recipient.equals("")) ? "myself" : recipient));
+				setStartAndEndPosForInstitution(0, sender);
+				return c.getString(R.string.transaction_descrip_airtime, sender, ((recipient == null || recipient.equals("")) ? "myself" : recipient));
 			case Action.P2P:
+				setStartAndEndPosForInstitution(1, action.from_institution_name);
 				return c.getString(R.string.transaction_descrip_money, action.to_institution_name, recipient);
 			case Action.ME2ME:
+				setStartAndEndPosForInstitution(1, action.from_institution_name);
 				return c.getString(R.string.transaction_descrip_money, action.from_institution_name, action.to_institution_name);
 			default:
 				return "Other";
 		}
 	}
 
-	private String formatAmount(String amount) {
-		DecimalFormat df = new DecimalFormat("0.00");
-		df.setMaximumFractionDigits(2);
-		return df.format(Integer.valueOf(amount));
+	private void setStartAndEndPosForInstitution(int startPos, String institutionName) {
+		fromInstitutionStartPos = startPos;
+		if(institutionName.split(" ").length > 1) fromInstitutionEndPos = startPos + institutionName.split(" ").length;
+		else fromInstitutionEndPos = startPos;
 	}
 
+
+
+
+	@NotNull
 	@Override
 	public String toString() {
 		return description;

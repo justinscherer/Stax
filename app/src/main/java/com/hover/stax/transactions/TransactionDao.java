@@ -16,6 +16,9 @@ public interface TransactionDao {
 	@Query("SELECT * FROM stax_transactions WHERE transaction_type != 'balance'")
 	LiveData<List<StaxTransaction>> getNonBalance();
 
+	@Query("SELECT * FROM stax_transactions WHERE channel_id = :channelId AND transaction_type != 'balance'")
+	LiveData<List<StaxTransaction>> getChannelTransactions(int channelId);
+
 	@Query("SELECT * FROM stax_transactions WHERE transaction_type != 'balance' AND status = 'succeeded'")
 	LiveData<List<StaxTransaction>> getSucceededNonBalance();
 
@@ -24,6 +27,10 @@ public interface TransactionDao {
 
 	@Query("SELECT * FROM stax_transactions WHERE uuid = :uuid LIMIT 1")
 	LiveData<StaxTransaction> getLiveTransaction(String uuid);
+
+	@Query("SELECT SUM(amount) as total FROM stax_transactions WHERE month=:month AND year =:year AND channel_id =:channelId")
+	LiveData<Double> getTotalAmount(int channelId, int month, int year);
+
 
 	@Insert
 	void insert(StaxTransaction transaction);

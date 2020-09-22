@@ -44,6 +44,10 @@ public class DatabaseRepo {
 		return channelDao.getChannel(id);
 	}
 
+	public LiveData<Channel> getChannelV2(int id) {
+		return channelDao.getChannelV2(id);
+	}
+
 	public LiveData<List<Channel>> getAll() {
 		return allChannels;
 	}
@@ -88,6 +92,13 @@ public class DatabaseRepo {
 
 	public LiveData<List<StaxTransaction>> getCompleteTransferTransactions() {
 		return transactionDao.getNonBalance();
+	}
+
+	public LiveData<List<StaxTransaction>> getCompleteTransferTransactionsByChannelId(int channelId) {
+		return transactionDao.getChannelTransactions(channelId);
+	}
+	public LiveData<Double> getSpentAmount(int channelId, int month, int year) {
+		return  transactionDao.getTotalAmount(channelId, month, year);
 	}
 
 	public StaxTransaction getTransaction(String uuid) {
